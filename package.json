@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/maddieclare/bamazon/issues"
   },
-  "homepage": "https://github.com/maddieclare/bamazon#readme"
+  "homepage": "https://github.com/maddieclare/bamazon#readme",
+  "dependencies": {
+    "mysql": "^2.17.1"
+  }
 }
