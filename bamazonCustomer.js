@@ -18,14 +18,11 @@ getListOfItems();
 function getListOfItems() {
   connection.query("SELECT * FROM products", function(err, results) {
     if (err) throw error;
-    // console.log(userPromptCall);
-
     console.log("\nCurrent items for sale:\n");
     for (let result of results) {
       let item = new Item(result.item_id, result.product_name, result.price);
       item.printItemDetails();
     }
-
     promptUserForId();
   });
 }
@@ -39,6 +36,18 @@ function promptUserForId() {
       }
     ])
     .then(function(response) {
-      console.log(response);
+      let itemId = response.get_id;
+      pullItemFromDatabase(itemId);
     });
+}
+
+function pullItemFromDatabase(id) {
+  connection.query("SELECT * FROM products WHERE ?", { item_id: id }, function(
+    err,
+    results
+  ) {
+    if (err) throw error;
+    let itemToPurchase = results[0].product_name;
+    console.log(`\nYou have selected: ${itemToPurchase}.`)
+  });
 }
