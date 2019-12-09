@@ -1,12 +1,5 @@
-const mysql = require("mysql");
+const connection = require("./connection");
 const inquirer = require("inquirer");
-
-const connection = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "0923MySq$#",
-  database: "bamazon"
-});
 
 connection.connect();
 
