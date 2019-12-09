@@ -3,6 +3,8 @@ const inquirer = require("inquirer");
 
 connection.connect();
 
+getListOfItems();
+
 function Item(id, name, price) {
   this.id = id;
   this.name = name;
@@ -12,8 +14,6 @@ function Item(id, name, price) {
     console.log(`${this.id}: ${this.name} ($${this.price})`);
   };
 }
-
-getListOfItems();
 
 function getListOfItems() {
   connection.query("SELECT * FROM products", function(err, results) {
@@ -48,6 +48,59 @@ function pullItemFromDatabase(id) {
   ) {
     if (err) throw error;
     let itemToPurchase = results[0].product_name;
-    console.log(`\nYou have selected: ${itemToPurchase}.`)
+    let stockQuantity = results[0].stock_quantity;
+    console.log(`\nYou have selected: ${itemToPurchase}.`);
+    promptForItemQuantity(itemToPurchase, stockQuantity);
   });
+}
+
+function promptForItemQuantity(item, stock) {
+  inquirer
+    .prompt([
+      {
+        name: "get_quantity",
+        message: "How many of this item would you like to purchase?"
+      }
+    ])
+    .then(function(response) {
+      let purchaseQuantity = response.get_quantity;
+      console.log(purchaseQuantity);
+      removePurchasedItemsFromDatabase(item, stock, purchaseQuantity);
+    });
+}
+
+function removePurchasedItemsFromDatabase(item, stock, quantity) {
+  let newQuantity = stock - quantity;
+  connection.query(
+    `UPDATE products SET stock_quantity = ${newQuantity} WHERE product_name = "${item}"`,
+    function() {
+      connection.query(
+        "SELECT * FROM products WHERE ?",
+        { product_name: item },
+        function(err, response) {
+          if (err) throw error;
+          let itemCost = response[0].price;
+          let totalCost = itemCost * quantity;
+
+          console.log(
+            `Your purchase details: x${quantity} ${item} for a total of $${totalCost}.`
+          );
+          inquirer
+          .prompt([
+            {
+              name: "restart_app",
+              message: "Would you like to continue shopping? (y/n)"
+            }
+          ])
+          .then(function(response) {
+            if (response.restart_app === "y") {
+              getListOfItems();
+            } else {
+              return console.log("Thank you for your purchase! Have a nice day.");
+            }
+          });
+        }
+      );
+    }
+  );
 }
