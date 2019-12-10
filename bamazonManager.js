@@ -135,9 +135,12 @@ function addToInventory() {
                   );
                 }
               );
+              console.log("\nReturning to main menu...");
+              setTimeout(function() {
+                listManagerCommands();
+              }, 2000);
             });
         }
       );
-      connection.end();
     });
 }
