@@ -5,13 +5,14 @@ connection.connect();
 
 getListOfItems();
 
-function Item(id, name, price) {
+function Item(id, name, price, stock) {
   this.id = id;
   this.name = name;
   this.price = price;
+  this.stock = stock;
 
   this.printItemDetails = function() {
-    console.log(`${this.id}: ${this.name} ($${this.price})`);
+    console.log(`${this.id}: ${this.name} ($${this.price}) (${stock} in stock)`);
   };
 }
 
@@ -20,7 +21,7 @@ function getListOfItems() {
     if (err) throw error;
     console.log("\nCurrent items for sale:\n");
     for (let result of results) {
-      let item = new Item(result.item_id, result.product_name, result.price);
+      let item = new Item(result.item_id, result.product_name, result.price, result.stock_quantity);
       item.printItemDetails();
     }
     promptUserForId();
@@ -71,36 +72,37 @@ function promptForItemQuantity(item, stock) {
 
 function removePurchasedItemsFromDatabase(item, stock, quantity) {
   let newQuantity = stock - quantity;
-  connection.query(
-    `UPDATE products SET stock_quantity = ${newQuantity} WHERE product_name = "${item}"`,
-    function() {
-      connection.query(
-        "SELECT * FROM products WHERE ?",
-        { product_name: item },
-        function(err, response) {
-          if (err) throw error;
-          let itemCost = response[0].price;
-          let totalCost = itemCost * quantity;
 
-          console.log(
-            `Your purchase details: x${quantity} ${item} for a total of $${totalCost}.`
-          );
-          inquirer
-          .prompt([
-            {
-              name: "restart_app",
-              message: "Would you like to continue shopping? (y/n)"
-            }
-          ])
-          .then(function(response) {
-            if (response.restart_app === "y") {
+  if (newQuantity < 0) {
+    console.log(
+      `\nError: We do not have enough of this item in stock to complete your request (current stock is ${stock}). Please try again.`
+    );
+    console.log("\nReloading stock list...");
+    setTimeout(function() {
+      getListOfItems();
+    }, 2000);
+  } else {
+    connection.query(
+      `UPDATE products SET stock_quantity = ${newQuantity} WHERE product_name = "${item}"`,
+      function() {
+        connection.query(
+          "SELECT * FROM products WHERE ?",
+          { product_name: item },
+          function(err, response) {
+            if (err) throw error;
+            let itemCost = response[0].price;
+            let totalCost = itemCost * quantity;
+
+            console.log(
+              `\nYour purchase details: x${quantity} ${item} for a total of $${totalCost}.`
+            );
+            console.log("\nReloading stock list...");
+            setTimeout(function() {
               getListOfItems();
-            } else {
-              return console.log("Thank you for your purchase! Have a nice day.");
-            }
-          });
-        }
-      );
-    }
-  );
+            }, 2000);
+          }
+        );
+      }
+    );
+  }
 }
