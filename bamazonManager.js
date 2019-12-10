@@ -17,6 +17,33 @@ function Product(id, name, price, stock) {
   };
 }
 
+listManagerCommands();
+
+function listManagerCommands() {
+  inquirer
+    .prompt([
+      {
+        name: "manager_commands",
+        type: "list",
+        message: "What would you like to do?",
+        choices: [
+          "View products for sale",
+          "View low inventory",
+          "Add to inventory"
+        ]
+      }
+    ])
+    .then(function(response) {
+      if (response.manager_commands === "View products for sale") {
+        viewProductsForSale();
+      } else if (response.manager_commands === "View low inventory") {
+        viewLowInventory();
+      } else if (response.manager_commands === "Add to inventory") {
+        addToInventory();
+      }
+    });
+}
+
 function viewProductsForSale() {
   connection.query("SELECT * FROM products", function(err, results) {
     if (err) throw error;
@@ -31,6 +58,7 @@ function viewProductsForSale() {
       product.printProductDetails();
     }
   });
+  connection.end();
 }
 
 function viewLowInventory() {
@@ -43,6 +71,7 @@ function viewLowInventory() {
 
     if (results.length === 0) {
       console.log("\nNo results found.");
+      backToMainMenu();
     } else {
       for (let result of results) {
         let product = new Product(
@@ -55,4 +84,60 @@ function viewLowInventory() {
       }
     }
   });
+  connection.end();
+}
+
+function addToInventory() {
+  inquirer
+    .prompt([
+      {
+        name: "get_id",
+        message:
+          "Please enter the ID of the product you would like to add stock for:"
+      }
+    ])
+    .then(function(response) {
+      let productId = response.get_id;
+      connection.query(
+        "SELECT * FROM products WHERE ?",
+        {
+          item_id: productId
+        },
+        function(err, results) {
+          if (err) throw error;
+
+          let productToAdd = new Product(
+            results[0].item_id,
+            results[0].product_name,
+            results[0].price,
+            results[0].stock_quantity
+          );
+
+          productToAdd.printProductDetails();
+
+          inquirer
+            .prompt([
+              {
+                name: "get_quantity",
+                message:
+                  "Please enter the quantity of stock you would like to add for this product:"
+              }
+            ])
+            .then(function(response) {
+              let additionalStock = response.get_quantity;
+              let totalStock = parseFloat(additionalStock) + productToAdd.stock;
+
+              connection.query(
+                `UPDATE products SET stock_quantity = ${totalStock} WHERE product_name = "${productToAdd.name}"`,
+                function() {
+                  console.log(
+                    `\nStock updated for: ${productToAdd.name}. New stock quantity: ${totalStock}`
+                  );
+                }
+              );
+            });
+        }
+      );
+      connection.end();
+    });
 }
